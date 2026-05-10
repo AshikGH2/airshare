@@ -1,72 +1,13 @@
-// --- CONFIGURATION ---
-const ACCESS_TOKEN = "ya29.c.c0AZ4bNpaBQE1uhhuzRbnrxSGEciopUDI39W784QcvCl_94uUm6NanecXY-THNn5_SEJ0IRVGZ6NaFsM_MSL7rhpK-WdtdgbWK0_mf2avThDxSJj0WDNBpkhP1CFoyeyRGoGu-ITRts_KJb6gFlSZwl6zX7X-1Mko3OJ0StWWDuDlCSJOr-iB4CjvYsOZHD6FISnd3SrfBBomr40_Ec5z79Ri40S7S4Se1w7e11F__vhUKUKsbY9r636RbZ-wo-pUZBaFjgOgLgAx5FengtKhozEYeTK3BMIMaVRpl5siTxcWoTTj0Ho26RvXi-z5RwfMphqmlcKaS8RaBh_phNX1YmPKbw3tM04EcCTbignWokVSsPebKD1RuqRgL384Ax77v7vhBla5flXaxXcZgFVOR34fhy-Rov16hoY9vstzsFVgMXM_h0R_qlty_bO3uaoQyUm8S4rkQqt7Xrv9y1I6lIbWuWBnmhwvmXSB0wXoek8iSz3i92kzoyiUQae1Q8xoYObdpyR-Bc_e38q-iX_um5vojth7lx4q5Yk_MVar6kI03lYk0nIWalMSbJb0l15iQa_uFfeO03roMuM-Okm5nqz5pfV7aOlqmoIXckqFXyhmMZ6yj_-57SRbUVl_gnIkvfItnxIBMr3lJyrOzhsXkh_jSo5FJ5YUrnrcZ1SwO8emQl1J_MexxRatSjt-d9RxtMrhce2qywe2sjXzho3bvd3kMu66BQgmZe6bfjiOoWlmXB_vSqc-tcm059-MfjrlxiMZSqdrtado14lVif3B2SYIx1Qvti9MuzQdjMOiIrMplWWWraUlfvRymaByh7lrs5gphj6dYb1_Ifv609qz9faz24_8ud9U3phqgsaUXYsZ5tRmppRYq66d6w9Uupca_q4zsV99qYXZM-fua71S3hlZ3i2lYw2Q8WmUVX93iIseagO28dOooI090RxijcgcWxoaBY_s6S-8mjq9ogV-Vdq4fMIZQbjf9lp6RhO84QcFJl816R3oeft_"; 
-const FOLDER_ID = "1pKHESPAG_dO7sonRCGZNKSQyAtemVYVo";
-
-async function upload() {
-    const file = document.getElementById('fileInput').files[0];
-    if (!file) return alert("Select a file first");
-
-    const btn = document.getElementById('uploadBtn');
-    const status = document.getElementById('status');
-    const bar = document.getElementById('prog-bar');
-    const container = document.getElementById('prog-container');
-
-    btn.disabled = true;
-    container.style.display = 'block';
-    status.innerText = "Requesting 10GB+ Secure Session...";
-
-    try {
-        // Step 1: Tell Google we are starting a LARGE, RESUMABLE session
-        // This session link stays valid even if the initial token expires!
-        const metadata = { name: file.name, parents: [FOLDER_ID] };
-        
-        const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${ACCESS_TOKEN}`,
-                'Content-Type': 'application/json',
-                'X-Upload-Content-Type': file.type,
-                'X-Upload-Content-Length': file.size
-            },
-            body: JSON.stringify(metadata)
-        });
-
-        if (!response.ok) throw new Error("Failed to start session. Refresh Token.");
-        const uploadUrl = response.headers.get('Location');
-
-        // Step 2: Push the data through the resumable tunnel
-        status.innerText = "Tunnel Secure. Starting Data Stream...";
-        const xhr = new XMLHttpRequest();
-        xhr.open('PUT', uploadUrl);
-
-        xhr.upload.onprogress = (e) => {
-            if (e.lengthComputable) {
-                const p = Math.round((e.loaded / e.total) * 100);
-                bar.style.width = p + '%';
-                const uploadedMB = (e.loaded / 1024 / 1024).toFixed(1);
-                const totalMB = (e.total / 1024 / 1024).toFixed(1);
-                status.innerText = `Uploading: ${uploadedMB}MB / ${totalMB}MB (${p}%)`;
-            }
-        };
-
-        xhr.onload = () => {
-            if (xhr.status === 200 || xhr.status === 201) {
-                status.innerText = "✅ 10GB+ Upload Successful!";
-            } else {
-                status.innerText = "❌ Session Interrupted. Please try again.";
-            }
-            btn.disabled = false;
-        };
-
-        xhr.onerror = () => {
-            status.innerText = "❌ Connection Lost. Check your internet.";
-            btn.disabled = false;
-        };
-
-        xhr.send(file);
-
-    } catch (err) {
-        status.innerText = "Error: " + err.message;
-        btn.disabled = false;
-    }
+{
+  "type": "service_account",
+  "project_id": "my-airshare-robot",
+  "private_key_id": "1e34542d68b272e5886fb690b06cbdfc986815c7",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDJOzVnFqDZdlCK\nmcYtIe820p8O55Eu84ROgXpnRIZQonQbdFlzLxyWld339qHTosId9sNy14Hvmjds\nemhqiZFhY6IC6/oy1uOLc+J3/ShUz92VfGs7H7PLUwCLQ8xtagcGxPQ+kdOy/PEe\nI1/TLtmdNcveiBRSe2RTA+9OlKr84ax2txxpih+2rgHs6z3EzZxd9EMJwwMAIw1+\nQAUA23fvKPszHgGEWnLAffNdpg0ubEvd5kKurjc6pN6Hqnx3QTCY3PeK7xcGNxfV\nYtSlN5GW1iq0oOe9jBLtfLCZrP3L1PckyGSKvDT8iIEsQM01X0q0R5W8yyVakiN+\n6v1ZxZyZAgMBAAECggEAA67dPdtIq2JCfB7vZSETX0YAmkW7vwe++q7c/infaXdn\nt57sCjMpC0qH6wNtF9IJSoIbNq1iF/ATJp2g7p5A9m7b5sDJ7gdH1+QRl4+fHtpF\nHHjP/5+Ha2fEAUiG49PGeCW/sKt7m/GMOjh8hwF7AykaZ6LG+HGAtxJB3YbUEFfK\ntPsCy0ihV+NKUkHZlyXWmyzlxwwNfxUDEimi4+tzhwRVad3Z1YqpUS4WPI1Yz1bs\no+btxIEa0JMCKTLgKuwtAsqEujYxcVA5QzYVJjZgI/HBb4nkqmwKqE8yb8UU26ta\nWhaV+2t74PNsf7ipL/VQ4xqRrfVsvo51zQHu4TzgJwKBgQD8PQ0VylvcwyJxjjPc\nifUiJdxloXl9oZII9pvDxj98zSXZGB7byPQQVXp91FojhPhBrmbgz44mhoF+y9vF\nQ/c/snSzf3pjpIRwlnQu2BEML8FTMxYeI4Outfg7TvbS+GlBqFzkqRu8LrPNESOg\ntLmCLWwGJQM7+gEN2zMmmV5pPwKBgQDMO26Hd0lyHSJNWGJBwCSdbk07AT2PXxkl\n//exDN0xWVF5WjhNPPK9XqfP5BcDcjvOrYI6MHdkwPszTC4JhIeHDLXXQcnuEkTw\nJLbeFPY2Xj8gAb0cjkAT5SrgApItp03TRV7JMNBSS5Qnbf6RNmA9myRiV2ltz0oL\nnZXtw8NsJwKBgQC4g9x/lTEP0/rtQI31hUG5wiJwgefCnB+cyPF3DB3DKLrIDVn9\ngwnurOjXBTEPDKUiPvbo+0vMKNavr2bL7gT/JocyC023eFCdn6HL5qjJ1mFAgH1s\nfKRGeLzmfcQW3jr5GbUiXAZ66VsD5sa+N5YAgUOlVwv/osmEnlXTpZuntwKBgBTx\nz18DI7wZMshd1Q3LJ7YhdrgjY23NoeWcv4kfuZty/oEEeJurMXWsPGd8i8Oltm52\nqtFO4R+rDtfu6xW8yq1V51wg+hV5OCqsiThzS+C9f5nHs9421Gl16hS5DsaxzrBo\n/9SANg0KhTIZ/K5lti77NxsCveQuCvjv+00781GnAoGAS6sjFl5dS1E/08pv8prL\nN5ZRAE42lM4hwbmTX4CpH5aDSjFdeOKTtTt4CwAcjk0qacNDhNI1RS84Q/CV/Ot8\n62tcEiAde5OSJZhuCA/Dqld8eLlVfXkJZVaPrk25q/QgTf3XnGENOxNge5Vx3Alb\nsRuGDWW9Yhq6A3VuPKYBYVw=\n-----END PRIVATE KEY-----\n",
+  "client_email": "airshare-bot@my-airshare-robot.iam.gserviceaccount.com",
+  "client_id": "112167328029766664529",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/airshare-bot%40my-airshare-robot.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
 }
