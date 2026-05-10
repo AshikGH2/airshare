@@ -1,34 +1,5 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AirShare | 1TB Cloud Drop</title>
-    <style>
-        :root { --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --accent: #38bdf8; }
-        body { font-family: sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .box { background: var(--card); padding: 2rem; border-radius: 1rem; width: 100%; max-width: 400px; text-align: center; border: 1px solid #334155; }
-        h2 { color: var(--accent); margin-bottom: 1rem; }
-        input[type="file"] { margin: 1.5rem 0; color: #94a3b8; width: 100%; }
-        #prog-container { width: 100%; background: #334155; height: 10px; border-radius: 5px; display: none; margin: 1rem 0; overflow: hidden; }
-        #prog-bar { background: var(--accent); width: 0%; height: 100%; }
-        button { background: var(--accent); color: var(--bg); border: none; padding: 1rem; border-radius: 0.5rem; font-weight: bold; width: 100%; cursor: pointer; }
-        #status { margin-top: 1rem; font-size: 0.8rem; color: var(--accent); }
-    </style>
-</head>
-<body>
-
-<div class="box">
-    <h2>AirShare</h2>
-    <input type="file" id="fileInput">
-    <button id="uploadBtn" onclick="upload()">Start Upload</button>
-    <div id="prog-container"><div id="prog-bar"></div></div>
-    <div id="status">Ready</div>
-</div>
-
-<script>
 // --- CONFIGURATION ---
-const ACCESS_TOKEN = "ya29.c.c0AZ4bNpbOxsoqbQKQ6BHxqZSVGZ24Xl0n5z5vowkQnz_cCsaxSWIX2hKv0cE-Jiz_fzJfzSSAb_d8CY90mZcnHuQ6IscZqkrkuJ82GZ7gsRkgrFaZoxSw2xLU28i34-BW2VZcOlRharoCYEBS46WLhi4zvc6SzhJKCwC0D6Kxu1YpKytTO32UQevAdZ_o_xfvD28e9NQxbz8R-gIS2V1eh6tcjjTZlDqGBX60blZ9ni0b74_nMeL3ogEsbWaUfbaX3V8lf7DyHSEU-MDTOP9cU-YK_LG8aOThklKNdPzRC0sDgsJrGZinopu_TbAkPtdd2Qosh0b_tsKLXGvIU9MBkzs6kbY7hT2MsGrtZdqSuCOVxkV14McK7wE383AjsRpoqRkty-19O64dqFxU-dBqysBeRFtiezfOeugoJcw1hJIidRi4JBkcRlz16lJohidY9YjS3xhxW4XqXft1mU9_ooh0sn2cd5FWgWS9reXk94QiWJv1n-It2orcJ46cdMpzMVgWu56tsl1ISah9_X4Z--WWFRj7WlgWgUcRmc3JfMVXcx229IFj7Munqn9Wwhin8qf6F4bYk71U3wlqSuizZyhxQOyzJdz8Wa3J8Z_YRtIYU_Sjr9jp_iW3jFJ41vY3IFwvkivYFanhuh-5ttm9cXq4zdvm7wsbv-6Y_6l5bgFqUOSz-hwVnIy2jfuonzpi4h91yXOFc8vOxmUdhkwuwsi-Mf6SdIeB593MqvBVtihFIVt2a2lViWJjXe0pnyjY9j-8gj2sz61lqhnfZJhBomyexcuR15FR0x8R8BQgjV2Bj6mYcussS-UIOFikXOg5R30VzeJkuzcVJ6f_0_zewMYV_FysWYsF6X48iZcjbq7ngu4_sygejhx18f3VYq2aIhBzzcyZ26mB5Vk3Iml3cnRe7XJ5-jjw85mO6goMusbv-9Yq2Q77kUz-96uIsq8IrzwutrbZ830hOfgpZrQXRpe0Rz8SUSOXoirtnXyifqbz_9rxa3tBz2X"; 
+const ACCESS_TOKEN = "INITIAL_TOKEN_HERE"; 
 const FOLDER_ID = "1pKHESPAG_dO7sonRCGZNKSQyAtemVYVo";
 
 async function upload() {
@@ -42,45 +13,60 @@ async function upload() {
 
     btn.disabled = true;
     container.style.display = 'block';
-    status.innerText = "Initializing...";
-
-    const metadata = {
-        name: file.name,
-        parents: [FOLDER_ID]
-    };
-
-    const formData = new FormData();
-    formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-    formData.append('file', file);
+    status.innerText = "Requesting 10GB+ Secure Session...";
 
     try {
+        // Step 1: Tell Google we are starting a LARGE, RESUMABLE session
+        // This session link stays valid even if the initial token expires!
+        const metadata = { name: file.name, parents: [FOLDER_ID] };
+        
+        const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${ACCESS_TOKEN}`,
+                'Content-Type': 'application/json',
+                'X-Upload-Content-Type': file.type,
+                'X-Upload-Content-Length': file.size
+            },
+            body: JSON.stringify(metadata)
+        });
+
+        if (!response.ok) throw new Error("Failed to start session. Refresh Token.");
+        const uploadUrl = response.headers.get('Location');
+
+        // Step 2: Push the data through the resumable tunnel
+        status.innerText = "Tunnel Secure. Starting Data Stream...";
         const xhr = new XMLHttpRequest();
-        xhr.open('POST', 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart');
-        xhr.setRequestHeader('Authorization', 'Bearer ' + ACCESS_TOKEN);
+        xhr.open('PUT', uploadUrl);
 
         xhr.upload.onprogress = (e) => {
             if (e.lengthComputable) {
                 const p = Math.round((e.loaded / e.total) * 100);
                 bar.style.width = p + '%';
-                status.innerText = `Uploading: ${p}%`;
+                const uploadedMB = (e.loaded / 1024 / 1024).toFixed(1);
+                const totalMB = (e.total / 1024 / 1024).toFixed(1);
+                status.innerText = `Uploading: ${uploadedMB}MB / ${totalMB}MB (${p}%)`;
             }
         };
 
         xhr.onload = () => {
-            if (xhr.status === 200) {
-                status.innerText = "✅ Upload Complete!";
+            if (xhr.status === 200 || xhr.status === 201) {
+                status.innerText = "✅ 10GB+ Upload Successful!";
             } else {
-                status.innerText = "❌ Error: Token may be expired. Run GitHub Action.";
+                status.innerText = "❌ Session Interrupted. Please try again.";
             }
             btn.disabled = false;
         };
 
-        xhr.send(formData);
+        xhr.onerror = () => {
+            status.innerText = "❌ Connection Lost. Check your internet.";
+            btn.disabled = false;
+        };
+
+        xhr.send(file);
+
     } catch (err) {
-        status.innerText = "System Error: " + err.message;
+        status.innerText = "Error: " + err.message;
         btn.disabled = false;
     }
 }
-</script>
-</body>
-</html>
