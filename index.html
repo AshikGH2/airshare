@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AirShare | 10GB+ Cloud Dropzone</title>
+    <style>
+        :root { --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --accent: #38bdf8; }
+        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .box { background: var(--card); padding: 2.5rem; border-radius: 1.5rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); width: 100%; max-width: 450px; text-align: center; border: 1px solid #334155; }
+        h2 { margin-top: 0; color: var(--accent); }
+        p { color: #94a3b8; font-size: 0.9rem; margin-bottom: 2rem; }
+        input[type="file"] { display: block; width: 100%; margin-bottom: 1.5rem; color: #94a3b8; cursor: pointer; }
+        #progress-container { width: 100%; background: #334155; border-radius: 999px; height: 16px; display: none; overflow: hidden; margin: 1.5rem 0; }
+        #progress-bar { background: var(--accent); width: 0%; height: 100%; transition: width 0.2s ease; }
+        button { background: var(--accent); color: var(--bg); border: none; padding: 1rem 2rem; border-radius: 0.75rem; font-weight: 800; cursor: pointer; width: 100%; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        #status { margin-top: 1.5rem; font-family: monospace; font-size: 0.85rem; color: #38bdf8; }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h2>AirShare</h2>
+    <p>Upload files directly to my 1TB Drive.<br>No account required.</p>
+    
+    <input type="file" id="fileInput" multiple>
+    
+    <button id="uploadBtn" onclick="initiateResumableUpload()">Start Upload</button>
+    
+    <div id="progress-container">
+        <div id="progress-bar"></div>
+    </div>
+    <div id="status">Ready</div>
+</div>
+
+<script>
+// --- AUTOMATED CONFIGURATION ---
+const ACCESS_TOKEN = "INITIAL_TOKEN_HERE"; 
+const FOLDER_ID = "1pKHESPAG_dO7sonRCGZNKSQyAtemVYVo";
+
+async function initiateResumableUpload() {
+    const fileInput = document.getElementById('fileInput');
+    const status = document.getElementById('status');
+    const bar = document.getElementById('progress-bar');
+    const container = document.getElementById('progress-container');
+    const btn = document.getElementById('uploadBtn');
+
+    if (!fileInput.files[0]) return alert("Please select at least one file.");
+    
+    // For this example, we process the first selected file
+    const file = fileInput.files[0];
+
+    btn.disabled = true;
+    container.style.display = 'block';
+    status.innerText = "Requesting Upload Session...";
+
+    const metadata = {
+        name: file.name,
+        parents: [FOLDER_ID]
+    };
+
+    try {
+        // 1. INITIALIZE RESUMABLE SESSION
+        const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${ACCESS_TOKEN}`,
+                'Content-Type': 'application/json; charset=UTF-8',
+                'X-Upload-Content-Length': file.size,
+                'X-Upload-Content-Type': file.type
+            },
+            body: JSON.stringify(metadata)
+        });
+
+        if (!response.ok) throw new Error("Token expired or Folder ID wrong. Please wait for GitHub Action to refresh.");
+
+        const sessionUrl = response.headers.get('Location');
+
+        // 2. STREAM FILE VIA XHR (Better for progress tracking)
+        status.innerText = "Connecting to Google Servers...";
+        
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', sessionUrl, true);
+        
+        xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+                const percent = Math.round((e.loaded / e.total) * 100);
+                bar.style.width = percent + "%";
+                const uploadedMB = (e.loaded / 1024 / 1024).toFixed(1);
+                const totalMB = (e.total / 1024 / 1024).toFixed(1);
+                status.innerText = `Uploading: ${percent}% (${uploadedMB} / ${totalMB} MB)`;
+            }
+        };
+
+        xhr.onload = () => {
+            if (xhr.status === 200 || xhr.status === 201) {
+                status.innerText = "✅ SUCCESS! File is in the 1TB Drive.";
+                status.style.color = "#4ade80";
+            } else {
+                status.innerText = "❌ ERROR: " + xhr.statusText;
+                status.style.color = "#f87171";
+            }
+            btn.disabled = false;
+        };
+
+        xhr.onerror = () => {
+            status.innerText = "❌ Network Error. Check internet connection.";
+            btn.disabled = false;
+        };
+
+        xhr.send(file);
+
+    } catch (err) {
+        status.innerText = "System: " + err.message;
+        btn.disabled = false;
+    }
+}
+</script>
+</body>
+</html>
