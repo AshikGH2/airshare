@@ -1,0 +1,64 @@
+name: Refresh Google Token
+
+on:
+  schedule:
+    - cron: '*/50 * * * *' # Runs every 50 minutes
+  workflow_dispatch:      # Allows you to click a button to run it manually
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write     # Allows the robot to save the new token to your index.html
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Google Auth Library
+        run: npm install google-auth-library
+
+      - name: Generate Token
+        id: generate_token
+        env:
+          GCP_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+        run: |
+          echo "$GCP_KEY" > key.json
+          node -e "
+            const {GoogleAuth} = require('google-auth-library');
+            async function run() {
+              try {
+                const auth = new GoogleAuth({
+                  keyFile: 'key.json',
+                  scopes: 'https://www.googleapis.com/auth/drive.file',
+                });
+                const client = await auth.getClient();
+                const tokenResponse = await client.getAccessToken();
+                console.log('TOKEN_VALUE=' + tokenResponse.token);
+              } catch (err) {
+                console.error(err);
+                process.exit(1);
+              }
+            }
+            run();
+          " > token_raw.txt
+          # Extract the token and save it to the environment
+          TOKEN=$(grep 'TOKEN_VALUE=' token_raw.txt | cut -d'=' -f2)
+          echo "TOKEN=$TOKEN" >> $GITHUB_ENV
+
+      - name: Update index.html
+        run: |
+          # This finds the line with ACCESS_TOKEN and swaps "INITIAL_TOKEN_HERE" for the real one
+          sed -i "s/const ACCESS_TOKEN = \".*\";/const ACCESS_TOKEN = \"${{ env.TOKEN }}\";/" index.html
+
+      - name: Commit and Push
+        run: |
+          git config --global user.name "GitHub Action Bot"
+          git config --global user.email "actions@github.com"
+          git add index.html
+          git commit -m "Auto-refresh Google Token [skip ci]" || echo "No changes to commit"
+          git push
